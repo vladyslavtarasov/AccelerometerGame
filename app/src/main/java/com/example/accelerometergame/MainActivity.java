@@ -12,15 +12,23 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
     private Sensor sensor;
     private SensorManager sensorManager;
     private AnimatedView animatedView = null;
+
+    private static final int SQUARE_ADD_INTERVAL = 500;
+    private Handler handler;
+    private Runnable squareAddRunnable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,6 +45,15 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         animatedView = new AnimatedView(this);
         setContentView(animatedView);
+
+        handler = new Handler();
+        squareAddRunnable = new Runnable() {
+            @Override
+            public void run() {
+                animatedView.addSquare();
+                handler.postDelayed(this, SQUARE_ADD_INTERVAL);
+            }
+        };
     }
 
     @Override
@@ -55,12 +72,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onPause() {
         super.onPause();
         sensorManager.unregisterListener(this);
+
+        handler.removeCallbacks(squareAddRunnable);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
+
+        handler.postDelayed(squareAddRunnable, SQUARE_ADD_INTERVAL);
     }
 
     public class AnimatedView extends View {
@@ -76,6 +97,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         private int width;
         private int height;
 
+        private final List<Square> squares;
+
         public AnimatedView (Context context) {
             super(context);
 
@@ -84,6 +107,20 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             borderPaint = new Paint();
             borderPaint.setColor(Color.RED);
+
+            squares = new ArrayList<>();
+        }
+
+        public void addSquare() {
+            int size = 100;
+            int x = (int) (Math.random() * (width - size));
+            int y = (int) (Math.random() * (height - size));
+            Square square = new Square(x, y, size);
+            squares.add(square);
+        }
+
+        public void removeSquare(Square square) {
+            squares.remove(square);
         }
 
         @Override
@@ -113,13 +150,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
             x = newX;
             y = newY;
+
+            for (int i = 0; i < squares.size(); i++) {
+                Square square = squares.get(i);
+
+                if (x + CIRCLE_RADIUS > square.getX() &&
+                        x - CIRCLE_RADIUS < square.getX() + square.getSize() &&
+                        y + CIRCLE_RADIUS > square.getY() &&
+                        y - CIRCLE_RADIUS < square.getY() + square.getSize()) {
+                    squares.remove(i);
+                    i--;
+                }
+            }
         }
 
         @Override
         protected void onDraw(Canvas canvas) {
             super.onDraw(canvas);
-
-            //canvas.drawRect(0, 0, width, height, paint1);
 
             borderPaint.setStyle(Paint.Style.STROKE);
             borderPaint.setStrokeWidth(BORDER_WIDTH);
@@ -130,6 +177,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             canvas.drawLine(0, height, width, height, borderPaint);
 
             canvas.drawCircle(x, y, CIRCLE_RADIUS, ballPaint);
+
+            for (Square square : squares) {
+                canvas.drawRect(square.getX(), square.getY(),
+                        square.getX() + square.getSize(), square.getY() + square.getSize(), borderPaint);
+            }
 
             invalidate();
         }
