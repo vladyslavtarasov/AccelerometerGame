@@ -1,12 +1,6 @@
 package com.example.accelerometergame;
 
-import androidx.appcompat.app.AppCompatActivity;
-
-import android.content.Context;
 import android.content.pm.ActivityInfo;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -16,19 +10,20 @@ import android.os.Handler;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.Button;
 
-import java.util.ArrayList;
-import java.util.List;
+import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
 
     private Sensor sensor;
     private SensorManager sensorManager;
     private AnimatedView animatedView = null;
-
     private static final int SQUARE_ADD_INTERVAL = 500;
     private Handler handler;
     private Runnable squareAddRunnable;
+    private Button startButton;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,10 +36,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-        sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
+        //sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
 
         animatedView = new AnimatedView(this);
-        setContentView(animatedView);
+        //setContentView(animatedView);
 
         handler = new Handler();
         squareAddRunnable = new Runnable() {
@@ -54,6 +49,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 handler.postDelayed(this, SQUARE_ADD_INTERVAL);
             }
         };
+
+        startButton = findViewById(R.id.start_button);
+        startButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startGame();
+            }
+        });
+    }
+
+    private void startGame() {
+        startButton.setVisibility(View.GONE);
+        sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
+        handler.postDelayed(squareAddRunnable, SQUARE_ADD_INTERVAL);
+        setContentView(animatedView);
     }
 
     @Override
@@ -82,124 +92,5 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
 
         handler.postDelayed(squareAddRunnable, SQUARE_ADD_INTERVAL);
-    }
-
-    public class AnimatedView extends View {
-
-        private static final int CIRCLE_RADIUS = 25;
-        private static final int BORDER_WIDTH = 10;
-        private final Paint ballPaint;
-        private final Paint borderPaint;
-
-        private int x;
-        private int y;
-
-        private int width;
-        private int height;
-
-        private final List<Square> squares;
-
-        public AnimatedView (Context context) {
-            super(context);
-
-            ballPaint = new Paint();
-            ballPaint.setColor(Color.GREEN);
-
-            borderPaint = new Paint();
-            borderPaint.setColor(Color.RED);
-
-            squares = new ArrayList<>();
-        }
-
-        public void addSquare() {
-            int size = 100;
-            int x = (int) (Math.random() * (width - size));
-            int y = (int) (Math.random() * (height - size));
-            Square newSquare = new Square(x, y, size);
-
-            for (Square square : squares) {
-                if (checkCollision(newSquare, square)) {
-                    return;
-                }
-            }
-
-            if (x < BORDER_WIDTH || y < BORDER_WIDTH || x + size > width - BORDER_WIDTH ||
-                    y + size > height - BORDER_WIDTH) {
-                return;
-            }
-
-            squares.add(newSquare);
-        }
-
-        private boolean checkCollision(Square square1, Square square2) {
-            int distanceBetweenSquares = 50;
-            return square1.getX() < square2.getX() + square2.getSize() + distanceBetweenSquares &&
-                    square1.getX() + square1.getSize() + distanceBetweenSquares > square2.getX() &&
-                    square1.getY() < square2.getY() + square2.getSize() + distanceBetweenSquares &&
-                    square1.getY() + square1.getSize() + distanceBetweenSquares > square2.getY();
-        }
-
-        @Override
-        protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-            super.onSizeChanged(w, h, oldw, oldh);
-            width = w;
-            height = h;
-        }
-
-        public void onSensorEvent(SensorEvent event) {
-            int scalingFactor = 3;
-
-            int newX = x - (int) (event.values[0] * scalingFactor);
-            int newY = y + (int) (event.values[1] * scalingFactor);
-
-            if (newX <= CIRCLE_RADIUS + BORDER_WIDTH / 2) {
-                newX = CIRCLE_RADIUS + BORDER_WIDTH / 2;
-            } else if (newX >= width - CIRCLE_RADIUS - BORDER_WIDTH / 2) {
-                newX = width - CIRCLE_RADIUS - BORDER_WIDTH / 2;
-            }
-
-            if (newY <= CIRCLE_RADIUS + BORDER_WIDTH / 2) {
-                newY = CIRCLE_RADIUS + BORDER_WIDTH / 2;
-            } else if (newY >= height - CIRCLE_RADIUS - BORDER_WIDTH / 2) {
-                newY = height - CIRCLE_RADIUS - BORDER_WIDTH / 2;
-            }
-
-            x = newX;
-            y = newY;
-
-            for (int i = 0; i < squares.size(); i++) {
-                Square square = squares.get(i);
-
-                if (x + CIRCLE_RADIUS > square.getX() &&
-                        x - CIRCLE_RADIUS < square.getX() + square.getSize() &&
-                        y + CIRCLE_RADIUS > square.getY() &&
-                        y - CIRCLE_RADIUS < square.getY() + square.getSize()) {
-                    squares.remove(i);
-                    i--;
-                }
-            }
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            super.onDraw(canvas);
-
-            borderPaint.setStyle(Paint.Style.STROKE);
-            borderPaint.setStrokeWidth(BORDER_WIDTH);
-
-            canvas.drawLine(0, 0, width, 0, borderPaint);
-            canvas.drawLine(0, 0, 0, height, borderPaint);
-            canvas.drawLine(width, 0, width, height, borderPaint);
-            canvas.drawLine(0, height, width, height, borderPaint);
-
-            canvas.drawCircle(x, y, CIRCLE_RADIUS, ballPaint);
-
-            for (Square square : squares) {
-                canvas.drawRect(square.getX(), square.getY(),
-                        square.getX() + square.getSize(), square.getY() + square.getSize(), borderPaint);
-            }
-
-            invalidate();
-        }
     }
 }
