@@ -133,4 +133,8 @@ public class AnimatedView extends View {
 
         invalidate();
     }
+
+    public void clearSquares() {
+        squares.clear();
+    }
 }

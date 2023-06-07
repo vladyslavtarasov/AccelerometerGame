@@ -1,5 +1,6 @@
 package com.example.accelerometergame;
 
+import android.content.DialogInterface;
 import android.content.pm.ActivityInfo;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -10,10 +11,10 @@ import android.os.Handler;
 import android.view.Window;
 import android.view.WindowManager;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class AccelerometerGameActivity extends AppCompatActivity implements SensorEventListener {
-
 
     private Sensor sensor;
     private SensorManager sensorManager;
@@ -21,8 +22,7 @@ public class AccelerometerGameActivity extends AppCompatActivity implements Sens
     private static final int SQUARE_ADD_INTERVAL = 500;
     private Handler handler;
     private Runnable squareAddRunnable;
-
-
+    private int squareCount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,12 +44,16 @@ public class AccelerometerGameActivity extends AppCompatActivity implements Sens
         squareAddRunnable = new Runnable() {
             @Override
             public void run() {
-                animatedView.addSquare();
+                if (animatedView.addSquare()) squareCount++;
+
+                if (squareCount > 10) {
+                    handleGameLost();
+                    return;
+                }
+
                 handler.postDelayed(this, SQUARE_ADD_INTERVAL);
             }
         };
-
-
     }
 
     @Override
@@ -80,4 +84,33 @@ public class AccelerometerGameActivity extends AppCompatActivity implements Sens
         handler.postDelayed(squareAddRunnable, SQUARE_ADD_INTERVAL);
     }
 
+    private void handleGameLost() {
+        sensorManager.unregisterListener(this);
+        handler.removeCallbacks(squareAddRunnable);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Game Over");
+        builder.setMessage("You have lost the game. Do you want to go to the main menu or start again?");
+        builder.setPositiveButton("Main Menu", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                finish();
+            }
+        });
+        builder.setNegativeButton("Start Again", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                restartGame();
+            }
+        });
+        builder.setCancelable(false);
+        builder.show();
+    }
+
+    private void restartGame() {
+        squareCount = 0;
+        animatedView.clearSquares();
+
+        recreate();
+    }
 }
