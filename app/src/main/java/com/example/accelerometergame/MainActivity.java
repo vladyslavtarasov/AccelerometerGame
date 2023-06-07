@@ -115,12 +115,28 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             int size = 100;
             int x = (int) (Math.random() * (width - size));
             int y = (int) (Math.random() * (height - size));
-            Square square = new Square(x, y, size);
-            squares.add(square);
+            Square newSquare = new Square(x, y, size);
+
+            for (Square square : squares) {
+                if (checkCollision(newSquare, square)) {
+                    return;
+                }
+            }
+
+            if (x < BORDER_WIDTH || y < BORDER_WIDTH || x + size > width - BORDER_WIDTH ||
+                    y + size > height - BORDER_WIDTH) {
+                return;
+            }
+
+            squares.add(newSquare);
         }
 
-        public void removeSquare(Square square) {
-            squares.remove(square);
+        private boolean checkCollision(Square square1, Square square2) {
+            int distanceBetweenSquares = 50;
+            return square1.getX() < square2.getX() + square2.getSize() + distanceBetweenSquares &&
+                    square1.getX() + square1.getSize() + distanceBetweenSquares > square2.getX() &&
+                    square1.getY() < square2.getY() + square2.getSize() + distanceBetweenSquares &&
+                    square1.getY() + square1.getSize() + distanceBetweenSquares > square2.getY();
         }
 
         @Override
