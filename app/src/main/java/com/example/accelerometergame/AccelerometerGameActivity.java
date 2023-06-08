@@ -8,7 +8,6 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Handler;
-import android.view.Window;
 import android.view.WindowManager;
 
 import androidx.appcompat.app.AlertDialog;
@@ -17,7 +16,9 @@ import androidx.appcompat.app.AppCompatActivity;
 public class AccelerometerGameActivity extends AppCompatActivity implements SensorEventListener {
 
     private Sensor sensor;
+    private Sensor proximitySensor;
     private SensorManager sensorManager;
+    private SensorManager proximityManager;
     private AnimatedView animatedView = null;
     private static final int SQUARE_ADD_INTERVAL = 500;
     private Handler handler;
@@ -26,7 +27,6 @@ public class AccelerometerGameActivity extends AppCompatActivity implements Sens
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -36,6 +36,9 @@ public class AccelerometerGameActivity extends AppCompatActivity implements Sens
         sensorManager = (SensorManager) getSystemService(SENSOR_SERVICE);
         sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         sensorManager.registerListener(this, sensor, SensorManager.SENSOR_DELAY_NORMAL);
+
+        proximitySensor = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+        sensorManager.registerListener(this, proximitySensor, SensorManager.SENSOR_DELAY_NORMAL);
 
         animatedView = new AnimatedView(this);
         setContentView(animatedView);
@@ -60,6 +63,11 @@ public class AccelerometerGameActivity extends AppCompatActivity implements Sens
     public void onSensorChanged(SensorEvent event) {
         if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             animatedView.onSensorEvent(event);
+        } else if (event.sensor.getType() == Sensor.TYPE_PROXIMITY) {
+            float proximityValue = event.values[0];
+            if (proximityValue < proximitySensor.getMaximumRange()) {
+                recreate();
+            }
         }
     }
 
